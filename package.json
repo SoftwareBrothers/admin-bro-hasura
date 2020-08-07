@@ -1,0 +1,54 @@
+{
+  "name": "@admin-bro/hasura",
+  "version": "1.0.1",
+  "main": "build/src/index.js",
+  "types": "types/src/index.d.ts",
+  "private": true,
+  "repository": "git@github.com:SoftwareBrothers/admin-bro-hasura.git",
+  "license": "MIT",
+  "scripts": {
+    "release": "semantic-release",
+    "build": "tsc",
+    "lint": "eslint './src/**/*' './example-app/**/*' --ignore-pattern '*.json' --ignore-pattern 'yarn.lock'",
+    "test": "./node_modules/mocha/bin/mocha build/spec/index.js"
+  },
+  "husky": {
+    "hooks": {
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "peerDependencies": {
+    "admin-bro": ">=3.0.0-beta.11"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "@semantic-release/git": "^9.0.0",
+    "@types/chai": "^4.2.12",
+    "@types/mocha": "^8.0.1",
+    "@types/sinon": "^9.0.4",
+    "@types/sinon-chai": "^3.2.4",
+    "@typescript-eslint/eslint-plugin": "^3.7.0",
+    "@typescript-eslint/parser": "^3.7.0",
+    "admin-bro": ">=3.0.0-beta.11",
+    "chai": "^4.2.0",
+    "eslint": "^7.5.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-react": "^7.20.3",
+    "eslint-plugin-react-hooks": "^4.0.8",
+    "husky": "^4.2.5",
+    "mocha": "^8.1.1",
+    "semantic-release": "^17.0.7",
+    "semantic-release-slack-bot": "^1.6.2",
+    "sinon": "^9.0.2",
+    "sinon-chai": "^3.5.0",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.1.3",
+    "cross-fetch": "^3.0.5",
+    "graphql": "^15.3.0"
+  }
+}
