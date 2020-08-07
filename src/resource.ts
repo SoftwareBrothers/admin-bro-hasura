@@ -16,6 +16,15 @@ import {
 } from './utils/querying'
 import { GraphQLFieldNode, HasuraResourceOptions } from './types'
 
+
+/**
+ * Method which builds a BaseResource for Hasura
+ * 
+ * @memberof module:@admin-bro/hasura
+ * @param {HasuraResourceOptions} options
+ * @return {Promise<BaseResource>}
+ * 
+ */
 const buildResource = async (
   options: HasuraResourceOptions,
 ): Promise<BaseResource> => {
