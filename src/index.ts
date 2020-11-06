@@ -1,12 +1,12 @@
 /**
  * @module @admin-bro/hasura
- * 
+ *
  * @description
  * ### A Hasura adapter for AdminBro.
- * 
+ *
  * ### Note
  * The adapter in it's current state supports only basic types and doesn't support relationships.
- * 
+ *
  * #### Installation
  *
  * To install the adapter run
@@ -18,7 +18,7 @@
  * ### Usage
  *
  * In order to use it in your project import `buildResource` and `schema.json`
- * 
+ *
  * You can download your GraphQL `schema.json` using apollo CLI:
  * ```
  *  yarn global add apollo
@@ -39,19 +39,16 @@
  *   parent: 'Hasura',
  *   schema: graphqlSchema.__schema,
  * })
- * 
+ *
  * const admin = new AdminBro({
  *   resources: [Person],
  *   // ...other AdminBro options
  * })
- * 
+ *
  * // ...
  * ```
  */
 
-
 import buildResource from './resource'
 
-export {
-  buildResource,
-}
+export { buildResource }
