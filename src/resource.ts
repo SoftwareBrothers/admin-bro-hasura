@@ -1,4 +1,4 @@
-import { BaseResource, BaseRecord, ParamsType } from 'admin-bro'
+import { BaseResource, BaseRecord, ParamsType, ResourceOptions } from 'admin-bro'
 import { ApolloClient, InMemoryCache, NormalizedCacheObject, gql, HttpLink } from '@apollo/client'
 import * as graphql from 'gql-query-builder'
 import fetch from 'cross-fetch'
@@ -14,6 +14,8 @@ import {
 } from './utils/querying'
 import { GraphQLFieldNode, HasuraResourceOptions } from './types'
 
+const DEFAULT_DB_TYPE = 'hasura'
+
 /**
  * Method which builds a BaseResource for Hasura
  *
@@ -22,44 +24,38 @@ import { GraphQLFieldNode, HasuraResourceOptions } from './types'
  * @return {Promise<BaseResource>}
  *
  */
-const buildResource = async (options: HasuraResourceOptions): Promise<BaseResource> => {
-  class Resource extends BaseResource {
-    graphqlEndpoint: string
+const buildResource = async (
+  options: HasuraResourceOptions
+): Promise<BaseResource> => {
+  const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? [];
+  const pkProperty = options.hasura.pkProperty;
+  const relationships = options.hasura.relationships ?? {};
+  const graphqlEndpoint = options.hasura.endpoint;
+  const graphqlClient = new ApolloClient({
+    link: new HttpLink({ uri: graphqlEndpoint, fetch }),
+    cache: new InMemoryCache(),
+    defaultOptions: {
+      query: {
+        fetchPolicy: 'no-cache',
+        errorPolicy: 'all',
+      },
+    },
+  });
 
-    private readonly dbType: string = 'hasura'
+
+  class Resource extends BaseResource {
+    private readonly dbType: string = DEFAULT_DB_TYPE
 
     resourceName: string
 
-    pkProperty: string
-
     dbName: string
-
-    client: ApolloClient<NormalizedCacheObject>
-
-    relationships: HasuraResourceOptions['hasura']['relationships'] = {}
-    fields: GraphQLFieldNode[]
 
     constructor() {
       super()
-      const { parent: dbName, name, hasura } = options
-      const { endpoint, pkProperty, schema, relationships = {} } = hasura
+      const { parent, id } = options
 
-      this.dbName = dbName || 'hasura'
-      this.graphqlEndpoint = endpoint
-      this.resourceName = name
-      this.pkProperty = pkProperty
-      this.client = new ApolloClient({
-        link: new HttpLink({ uri: this.graphqlEndpoint, fetch }),
-        cache: new InMemoryCache(),
-        defaultOptions: {
-          query: {
-            fetchPolicy: 'no-cache',
-            errorPolicy: 'all',
-          },
-        },
-      })
-      this.relationships = relationships
-      this.fields = schema.types.find((type) => type.name === name).fields
+      this.dbName = parent ? (typeof parent === 'string' ? parent : parent.name) ?? DEFAULT_DB_TYPE : DEFAULT_DB_TYPE
+      this.resourceName = id
     }
 
     getQueryProperties() {
@@ -84,17 +80,17 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
     }
 
     properties(): Property[] {
-      const propertiesMap = this.fields
+      const propertiesMap = fields
         .reduce((properties, field) => {
-          const relationship = this.relationships[field.name]
+          const relationship = relationships[field.name]
           if (relationship) {
-            const reference = this.fields.find(f => f.name === relationship.referenceField)
+            const reference = fields.find(f => f.name === relationship.referenceField)
 
             if (!reference) return properties
 
-            properties[reference.name] = new Property(reference, this.pkProperty, relationship.resourceName)
+            properties[reference.name] = new Property(reference, pkProperty, relationship.resourceName)
           } else if (!(field.name in properties) && !(field.description || '').includes('relationship')) {
-            properties[field.name] = new Property(field, this.pkProperty)
+            properties[field.name] = new Property(field, pkProperty)
           }
 
           return properties
@@ -123,7 +119,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         { operationName: queryName },
       )
 
-      const response = await this.client.query({
+      const response = await graphqlClient.query({
         query: gql(gqlQuery),
         variables,
       })
@@ -147,12 +143,15 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         { operationName: queryName },
       )
 
-      const response = await this.client.query({
+      const response = await graphqlClient.query({
         query: gql(gqlQuery),
         variables,
       })
 
-      return response.data[queryName].map((result) => new BaseRecord(result, this))
+      return response.data[queryName].map((result) => {
+        const { __typename, ...data } = result;
+        return new BaseRecord(data, this);
+      })
     }
 
     async findOne(id: string) {
@@ -164,18 +163,20 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         {
           operation: queryName,
           fields: properties,
-          variables: buildFindOneVariables({ id }, this.pkProperty),
+          variables: buildFindOneVariables({ id }, pkProperty),
         },
         null,
         { operationName: queryName },
       )
 
-      const response = await this.client.query({
+      const response = await graphqlClient.query({
         query: gql(gqlQuery),
         variables,
       })
       
-      return new BaseRecord(response.data[queryName], this)
+      const { __typename, ...data } = response.data[queryName];
+
+      return new BaseRecord(data, this)
     }
 
     async findMany(ids: Array<string>) {
@@ -187,18 +188,21 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         {
           operation: queryName,
           fields: properties,
-          variables: buildFindManyVariables({ ids }, this.pkProperty, this.resourceName),
+          variables: buildFindManyVariables({ ids }, pkProperty, this.resourceName),
         },
         null,
         { operationName: queryName },
       )
 
-      const response = await this.client.query({
+      const response = await graphqlClient.query({
         query: gql(gqlQuery),
         variables,
       })
 
-      return response.data[queryName].map((result) => new BaseRecord(result, this))
+      return response.data[queryName].map((result) => {
+        const { __typename, ...data } = result
+        return new BaseRecord(data, this)
+      })
     }
 
     async create(params: Record<string, any>) {
@@ -216,7 +220,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         },
       )
 
-      const response = await this.client.mutate({
+      const response = await graphqlClient.mutate({
         mutation: gql(gqlMutation),
         variables,
       })
@@ -235,11 +239,11 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         {
           operation: mutationName,
           fields: properties,
-          variables: buildDeleteVariables({ id }, this.pkProperty),
+          variables: buildDeleteVariables({ id }, pkProperty),
         },
       )
 
-      await this.client.mutate({
+      await graphqlClient.mutate({
         mutation: gql(gqlMutation),
         variables
       })
@@ -255,11 +259,11 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         {
           operation: mutationName,
           fields: properties,
-          variables: buildUpdateVariables({ id, params }, this.pkProperty, this.resourceName),
+          variables: buildUpdateVariables({ id, params }, pkProperty, this.resourceName),
         },
       )
 
-      const response = await this.client.mutate({
+      const response = await graphqlClient.mutate({
         mutation: gql(gqlMutation),
         variables,
       })

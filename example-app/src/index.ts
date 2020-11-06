@@ -14,7 +14,7 @@ const run = async () => {
   const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT || '<your hasura graphql url>'
 
   const Drink = await buildResource({
-    name: 'drink',
+    id: 'drink',
     parent: 'Hasura',
     hasura: {
       schema: graphqlSchema.__schema,
@@ -25,7 +25,7 @@ const run = async () => {
   })
 
   const Person = await buildResource({
-    name: 'person',
+    id: 'person',
     parent: 'Hasura',
     hasura: {
       schema: graphqlSchema.__schema,
