@@ -13,6 +13,7 @@ import {
   buildUpdateVariables,
 } from './utils/querying'
 import { GraphQLFieldNode, HasuraResourceOptions } from './types'
+import { stripTypename } from './utils/strip-typename';
 
 const DEFAULT_DB_TYPE = 'hasura'
 
@@ -148,10 +149,7 @@ const buildResource = async (
         variables,
       })
 
-      return response.data[queryName].map((result) => {
-        const { __typename, ...data } = result;
-        return new BaseRecord(data, this);
-      })
+      return response.data[queryName].map((result) => new BaseRecord(stripTypename(result), this))
     }
 
     async findOne(id: string) {
@@ -174,9 +172,7 @@ const buildResource = async (
         variables,
       })
       
-      const { __typename, ...data } = response.data[queryName];
-
-      return new BaseRecord(data, this)
+      return new BaseRecord(new BaseRecord(stripTypename(response.data[queryName]), this), this)
     }
 
     async findMany(ids: Array<string>) {
@@ -199,10 +195,7 @@ const buildResource = async (
         variables,
       })
 
-      return response.data[queryName].map((result) => {
-        const { __typename, ...data } = result
-        return new BaseRecord(data, this)
-      })
+      return response.data[queryName].map((result) => new BaseRecord(stripTypename(result), this))
     }
 
     async create(params: Record<string, any>) {
@@ -225,9 +218,7 @@ const buildResource = async (
         variables,
       })
 
-      const { __typename, ...data } = response.data[mutationName].returning[0];
-
-      return new BaseRecord(data, this)
+      return new BaseRecord(stripTypename(response.data[mutationName].returning[0]), this)
     }
 
     async delete(id: string) {
@@ -268,9 +259,7 @@ const buildResource = async (
         variables,
       })
 
-      const { __typename, ...data } = response.data[mutationName];
-
-      return new BaseRecord(data, this)
+      return new BaseRecord(stripTypename(response.data[mutationName]), this)
     }
   }
 
