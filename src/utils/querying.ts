@@ -1,6 +1,8 @@
+/* eslint-disable no-underscore-dangle */
 /* eslint-disable no-restricted-globals */
 /* eslint-disable camelcase */
 import Property from '../property'
+import { stripTypename } from './strip-typename'
 
 type FindFilter = { [field: string]: { path: string; property?: Property; value: any } }
 type FindFilterOperator = '_in' | '_eq' | '_lte' | '_gte'
@@ -60,7 +62,7 @@ type UpdateVariables = {
 }
 
 const transformFilterValue = (originalValue: any, property?: Property) => {
-  var type = Object.prototype.toString.call(originalValue)
+  const type = Object.prototype.toString.call(originalValue)
 
   const isArray = type === '[object Array]'
   const isObject = type === '[object Object]'
@@ -90,27 +92,27 @@ const whereArgumentFromFilters = (filters?: FindFilter) => {
 
 const getQueryOrMutationName = (resourceName: string, query: string): string => {
   switch (query) {
-    case 'findMany':
-    case 'find': {
-      return resourceName
-    }
-    case 'findOne': {
-      return `${resourceName}_by_pk`
-    }
-    case 'create': {
-      return `insert_${resourceName}`
-    }
-    case 'update': {
-      return `update_${resourceName}_by_pk`
-    }
-    case 'delete': {
-      return `delete_${resourceName}_by_pk`
-    }
-    case 'count': {
-      return `${resourceName}_aggregate`
-    }
-    default:
-      throw new Error('Query not implemented')
+  case 'findMany':
+  case 'find': {
+    return resourceName
+  }
+  case 'findOne': {
+    return `${resourceName}_by_pk`
+  }
+  case 'create': {
+    return `insert_${resourceName}`
+  }
+  case 'update': {
+    return `update_${resourceName}_by_pk`
+  }
+  case 'delete': {
+    return `delete_${resourceName}_by_pk`
+  }
+  case 'count': {
+    return `${resourceName}_aggregate`
+  }
+  default:
+    throw new Error('Query not implemented')
   }
 }
 
@@ -156,12 +158,13 @@ const buildFindVariables = (
   return variables
 }
 
-const buildCountVariables = ({ filters = {} }: { filters?: FindFilter}, resourceName: string) => {
+const buildCountVariables = (
+  { filters = {} }: { filters?: FindFilter},
+  resourceName: string,
+): FindVariables => {
   const variables: FindVariables = {}
   if (filters && Object.keys(filters).length) {
     const where = whereArgumentFromFilters(filters)
-
-    console.log(where, filters)
 
     variables.where = {
       name: 'where',
@@ -229,11 +232,9 @@ const buildUpdateVariables = (
     },
   }
 
-  const { __typename, ...data } = params
-
   variables._set = {
     type: `${resourceName}_set_input!`,
-    value: data,
+    value: stripTypename(params),
   }
 
   return variables

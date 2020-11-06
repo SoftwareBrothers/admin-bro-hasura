@@ -26,7 +26,7 @@ const run = async () => {
       endpoint: graphqlEndpoint,
       pkProperty: 'id',
       relationships: {},
-    }
+    },
   })
 
   const Person = await buildResource({
@@ -39,10 +39,10 @@ const run = async () => {
       relationships: {
         drink: {
           referenceField: 'favorite_drink_id',
-          resourceName: 'drink'
-        }
-      }
-    }
+          resourceName: 'drink',
+        },
+      },
+    },
   })
 
   const admin = new AdminBro({

@@ -14,7 +14,7 @@ import {
   buildCountVariables,
 } from './utils/querying'
 import { HasuraResourceOptions } from './types'
-import { stripTypename } from './utils/strip-typename';
+import { stripTypename } from './utils/strip-typename'
 
 const DEFAULT_DB_TYPE = 'hasura'
 
@@ -26,13 +26,11 @@ const DEFAULT_DB_TYPE = 'hasura'
  * @return {Promise<BaseResource>}
  *
  */
-const buildResource = async (
-  options: HasuraResourceOptions
-): Promise<BaseResource> => {
-  const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? [];
-  const pkProperty = options.hasura.pkProperty;
-  const relationships = options.hasura.relationships ?? {};
-  const graphqlEndpoint = options.hasura.endpoint;
+const buildResource = async (options: HasuraResourceOptions): Promise<BaseResource> => {
+  const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? []
+  const { pkProperty } = options.hasura
+  const relationships = options.hasura.relationships ?? {}
+  const graphqlEndpoint = options.hasura.endpoint
   const graphqlClient = new ApolloClient({
     link: new HttpLink({ uri: graphqlEndpoint, fetch }),
     cache: new InMemoryCache(),
@@ -42,8 +40,7 @@ const buildResource = async (
         errorPolicy: 'all',
       },
     },
-  });
-
+  })
 
   class Resource extends BaseResource {
     private readonly dbType: string = DEFAULT_DB_TYPE
@@ -81,23 +78,22 @@ const buildResource = async (
     }
 
     properties(): Property[] {
-      const propertiesMap = fields
-        .reduce((properties, field) => {
-          const relationship = relationships[field.name]
-          if (relationship) {
-            const reference = fields.find(f => f.name === relationship.referenceField)
+      const propertiesMap = fields.reduce((properties, field) => {
+        const relationship = relationships[field.name]
+        if (relationship) {
+          const reference = fields.find((f) => f.name === relationship.referenceField)
 
-            if (!reference) return properties
+          if (!reference) return properties
 
-            properties[reference.name] = new Property(reference, pkProperty, relationship.resourceName)
-          } else if (!(field.name in properties) && !(field.description || '').includes('relationship')) {
-            properties[field.name] = new Property(field, pkProperty)
-          }
+          properties[reference.name] = new Property(reference, pkProperty, relationship.resourceName)
+        } else if (!(field.name in properties) && !(field.description || '').includes('relationship')) {
+          properties[field.name] = new Property(field, pkProperty)
+        }
 
-          return properties
-        }, {})
+        return properties
+      }, {})
 
-        return Object.values(propertiesMap)
+      return Object.values(propertiesMap)
     }
 
     property(name: string) {
@@ -172,7 +168,7 @@ const buildResource = async (
         query: gql(gqlQuery),
         variables,
       })
-      
+
       return new BaseRecord(new BaseRecord(stripTypename(response.data[queryName]), this), this)
     }
 
@@ -204,15 +200,15 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
-      const { query: gqlMutation, variables } = graphql.mutation(
-        {
-          operation: mutationName,
-          fields: [{
-            returning: properties
-          }],
-          variables: buildCreateVariables(params, this.resourceName),
-        },
-      )
+      const { query: gqlMutation, variables } = graphql.mutation({
+        operation: mutationName,
+        fields: [
+          {
+            returning: properties,
+          },
+        ],
+        variables: buildCreateVariables(params, this.resourceName),
+      })
 
       const response = await graphqlClient.mutate({
         mutation: gql(gqlMutation),
@@ -227,17 +223,15 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
-      const { query: gqlMutation, variables } = graphql.mutation(
-        {
-          operation: mutationName,
-          fields: properties,
-          variables: buildDeleteVariables({ id }, pkProperty),
-        },
-      )
+      const { query: gqlMutation, variables } = graphql.mutation({
+        operation: mutationName,
+        fields: properties,
+        variables: buildDeleteVariables({ id }, pkProperty),
+      })
 
       await graphqlClient.mutate({
         mutation: gql(gqlMutation),
-        variables
+        variables,
       })
     }
 
@@ -246,14 +240,11 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
-
-      const { query: gqlMutation, variables } = graphql.mutation(
-        {
-          operation: mutationName,
-          fields: properties,
-          variables: buildUpdateVariables({ id, params }, pkProperty, this.resourceName),
-        },
-      )
+      const { query: gqlMutation, variables } = graphql.mutation({
+        operation: mutationName,
+        fields: properties,
+        variables: buildUpdateVariables({ id, params }, pkProperty, this.resourceName),
+      })
 
       const response = await graphqlClient.mutate({
         mutation: gql(gqlMutation),

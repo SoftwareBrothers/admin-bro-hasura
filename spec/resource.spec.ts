@@ -18,8 +18,8 @@ describe('Resource', () => {
         endpoint,
         schema: testSchema,
         pkProperty,
-        relationships: {}
-      }
+        relationships: {},
+      },
     })
   })
 

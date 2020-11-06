@@ -18,6 +18,7 @@ class Property extends BaseProperty {
   gqlFieldDefinitionNode: any
 
   pkProperty: string
+
   referencedResource: string | null
 
   constructor(
@@ -51,7 +52,7 @@ class Property extends BaseProperty {
   }
 
   isVisible(): boolean {
-    return this.name() !== '__typename';
+    return this.name() !== '__typename'
   }
 
   isId(): boolean {
