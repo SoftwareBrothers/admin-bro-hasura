@@ -33,6 +33,7 @@ const run = async () => {
 
   const admin = new AdminBro({
     resources: [Drink, Person],
+    rootPath: '/app',
   })
   const router = buildRouter(admin)
 

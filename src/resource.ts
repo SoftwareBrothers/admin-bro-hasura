@@ -1,55 +1,50 @@
 import { BaseResource, BaseRecord, ParamsType } from 'admin-bro'
-import {
-  ApolloClient,
-  InMemoryCache,
-  NormalizedCacheObject,
-  gql,
-  HttpLink,
-} from '@apollo/client'
+import { ApolloClient, InMemoryCache, NormalizedCacheObject, gql, HttpLink } from '@apollo/client'
+import * as graphql from 'gql-query-builder'
 import fetch from 'cross-fetch'
 import Property from './property'
 import {
-  constructListArgs,
   getQueryOrMutationName,
-  constructInsertArgs,
-  constructUpdateArgs,
+  buildFindVariables,
+  buildFindOneVariables,
+  buildFindManyVariables,
+  buildCreateVariables,
+  buildDeleteVariables,
+  buildUpdateVariables,
 } from './utils/querying'
 import { GraphQLFieldNode, HasuraResourceOptions } from './types'
 
-
 /**
  * Method which builds a BaseResource for Hasura
- * 
+ *
  * @memberof module:@admin-bro/hasura
  * @param {HasuraResourceOptions} options
  * @return {Promise<BaseResource>}
- * 
+ *
  */
-const buildResource = async (
-  options: HasuraResourceOptions,
-): Promise<BaseResource> => {
+const buildResource = async (options: HasuraResourceOptions): Promise<BaseResource> => {
   class Resource extends BaseResource {
-    graphqlEndpoint: string;
+    graphqlEndpoint: string
 
-    dbType: string;
+    private readonly dbType: string = 'hasura'
 
-    resourceName: string;
+    resourceName: string
 
-    pkProperty: string;
+    pkProperty: string
 
-    dbName: string;
+    dbName: string
 
-    client: ApolloClient<NormalizedCacheObject>;
+    client: ApolloClient<NormalizedCacheObject>
 
-    fields: GraphQLFieldNode[];
+    fields: GraphQLFieldNode[]
 
     constructor() {
       super()
-      this.dbType = 'hasura'
-      this.dbName = options.parent || 'hasura'
-      this.graphqlEndpoint = options.endpoint
-      this.resourceName = options.name
-      this.pkProperty = options.pkProperty
+      const { parent: dbName, endpoint, name, pkProperty } = options
+      this.dbName = dbName || 'hasura'
+      this.graphqlEndpoint = endpoint
+      this.resourceName = name
+      this.pkProperty = pkProperty
       this.client = new ApolloClient({
         link: new HttpLink({ uri: this.graphqlEndpoint, fetch }),
         cache: new InMemoryCache(),
@@ -60,16 +55,12 @@ const buildResource = async (
           },
         },
       })
-      this.fields = options.schema.types.find(
-        (type) => type.name === options.name,
-      ).fields
+      this.fields = options.schema.types.find((type) => type.name === name).fields
     }
 
     getQueryProperties() {
       return this.properties()
-        .filter(
-          (property) => property.type() !== 'reference' && !property.isArray(),
-        )
+        .filter((property) => property.type() !== 'reference' && !property.isArray())
         .map((property) => property.name())
     }
 
@@ -102,40 +93,49 @@ const buildResource = async (
     async count() {
       const queryName = getQueryOrMutationName(this.resourceName, 'count')
 
+      const { query: gqlQuery, variables } = graphql.query(
+        {
+          operation: queryName,
+          fields: [
+            {
+              aggregate: ['count'],
+            },
+          ],
+        },
+        null,
+        { operationName: queryName },
+      )
+
       const response = await this.client.query({
-        query: gql(`
-          query ${queryName} {
-            ${queryName} {
-              aggregate {
-                count
-              }
-            }
-          }
-        `),
+        query: gql(gqlQuery),
+        variables,
       })
 
       return response.data[queryName].aggregate.count
     }
 
-    async find(query, { limit = 2, offset = 0, sort }) {
+    async find(query, { limit = 10, offset = 0, sort }) {
       const queryName = getQueryOrMutationName(this.resourceName, 'find')
 
       const { filters } = query
       const properties = this.getQueryProperties()
 
+      const { query: gqlQuery, variables } = graphql.query(
+        {
+          operation: queryName,
+          variables: buildFindVariables({ limit, offset, sort, filters }, this.resourceName),
+          fields: properties,
+        },
+        null,
+        { operationName: queryName },
+      )
+
       const response = await this.client.query({
-        query: gql(`
-          query ${queryName} {
-            ${queryName}${constructListArgs({ limit, offset, sort, filters })} {
-              ${properties.join(' ')}
-            }
-          }
-        `),
+        query: gql(gqlQuery),
+        variables,
       })
 
-      return response.data[queryName].map(
-        (result) => new BaseRecord(result, this),
-      )
+      return response.data[queryName].map((result) => new BaseRecord(result, this))
     }
 
     async findOne(id: string) {
@@ -143,16 +143,21 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
-      const response = await this.client.query({
-        query: gql(`
-          query ${queryName} {
-            ${queryName}(${this.pkProperty}: "${id}") {
-              ${properties.join(' ')}
-            }
-          }
-        `),
-      })
+      const { query: gqlQuery, variables } = graphql.query(
+        {
+          operation: queryName,
+          fields: properties,
+          variables: buildFindOneVariables({ id }, this.pkProperty),
+        },
+        null,
+        { operationName: queryName },
+      )
 
+      const response = await this.client.query({
+        query: gql(gqlQuery),
+        variables,
+      })
+      
       return new BaseRecord(response.data[queryName], this)
     }
 
@@ -161,19 +166,22 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
+      const { query: gqlQuery, variables } = graphql.query(
+        {
+          operation: queryName,
+          fields: properties,
+          variables: buildFindManyVariables({ ids }, this.pkProperty, this.resourceName),
+        },
+        null,
+        { operationName: queryName },
+      )
+
       const response = await this.client.query({
-        query: gql(`
-          query ${queryName} {
-            ${queryName}${constructListArgs({ filters: { [this.pkProperty]: { path: `${this.pkProperty}`, value: ids } } })} {
-              ${properties.join(' ')}
-            }
-          }
-        `),
+        query: gql(gqlQuery),
+        variables,
       })
 
-      return response.data[queryName].map(
-        (result) => new BaseRecord(result, this),
-      )
+      return response.data[queryName].map((result) => new BaseRecord(result, this))
     }
 
     async create(params: Record<string, any>) {
@@ -181,19 +189,24 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
+      const { query: gqlMutation, variables } = graphql.mutation(
+        {
+          operation: mutationName,
+          fields: [{
+            returning: properties
+          }],
+          variables: buildCreateVariables(params, this.resourceName),
+        },
+      )
+
       const response = await this.client.mutate({
-        mutation: gql(`
-          mutation ${mutationName} {
-            ${mutationName}(objects: ${constructInsertArgs(params)}) {
-              returning {
-                ${properties.join(' ')}
-              }
-            }
-          }
-        `),
+        mutation: gql(gqlMutation),
+        variables,
       })
 
-      return new BaseRecord(response.data[mutationName].returning[0], this)
+      const { __typename, ...data } = response.data[mutationName].returning[0];
+
+      return new BaseRecord(data, this)
     }
 
     async delete(id: string) {
@@ -201,14 +214,17 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
+      const { query: gqlMutation, variables } = graphql.mutation(
+        {
+          operation: mutationName,
+          fields: properties,
+          variables: buildDeleteVariables({ id }, this.pkProperty),
+        },
+      )
+
       await this.client.mutate({
-        mutation: gql(`
-          mutation ${mutationName} {
-            ${mutationName}(${this.pkProperty}: "${id}") {
-              ${properties.join(' ')}
-            }
-          }
-        `),
+        mutation: gql(gqlMutation),
+        variables
       })
     }
 
@@ -217,17 +233,23 @@ const buildResource = async (
 
       const properties = this.getQueryProperties()
 
+
+      const { query: gqlMutation, variables } = graphql.mutation(
+        {
+          operation: mutationName,
+          fields: properties,
+          variables: buildUpdateVariables({ id, params }, this.pkProperty, this.resourceName),
+        },
+      )
+
       const response = await this.client.mutate({
-        mutation: gql(`
-          mutation ${mutationName} {
-            ${mutationName}${constructUpdateArgs(id, this.pkProperty, params)} {
-              ${properties.join(' ')}
-            }
-          }
-        `),
+        mutation: gql(gqlMutation),
+        variables,
       })
 
-      return new BaseRecord(response.data[mutationName], this)
+      const { __typename, ...data } = response.data[mutationName];
+
+      return new BaseRecord(data, this)
     }
   }
 
