@@ -13,6 +13,10 @@ const run = async () => {
 
   const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT || '<your hasura graphql url>'
 
+  // GraphQL Schema introspection in .json format is required to build resources, you can fetch it
+  // using these commands:
+  // $ yarn add get-graphql-schema
+  // $ get-graphql-schema <GRAPHQL_ENDPOINT_URL> -j > schema.json
   const Drink = await buildResource({
     id: 'drink',
     parent: 'Hasura',

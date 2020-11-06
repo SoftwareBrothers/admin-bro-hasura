@@ -10,6 +10,8 @@ const TYPES_MAPPING = {
   json: 'object',
   jsonb: 'object',
   bigint: 'number',
+  timestamp: 'datetime',
+  timestamptz: 'datetime',
 }
 
 class Property extends BaseProperty {
