@@ -100,7 +100,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
       return this.properties().find((p) => p.name() === name) || null
     }
 
-    async count({ filters = {} }) {
+    async count({ filters = {} }): Promise<number> {
       const queryName = getQueryOrMutationName(this.resourceName, 'count')
 
       const { query: gqlQuery, variables } = graphql.query(
@@ -125,7 +125,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
       return response.data[queryName].aggregate.count
     }
 
-    async find(query, { limit = 10, offset = 0, sort }) {
+    async find(query, { limit = 10, offset = 0, sort }): Promise<Array<BaseRecord>> {
       const queryName = getQueryOrMutationName(this.resourceName, 'find')
 
       const { filters } = query
@@ -149,7 +149,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
       return response.data[queryName].map((result) => new BaseRecord(stripTypename(result), this))
     }
 
-    async findOne(id: string) {
+    async findOne(id: string): Promise<BaseRecord> {
       const queryName = getQueryOrMutationName(this.resourceName, 'findOne')
 
       const properties = this.getQueryProperties()
@@ -172,7 +172,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
       return new BaseRecord(stripTypename(response.data[queryName]), this)
     }
 
-    async findMany(ids: Array<string>) {
+    async findMany(ids: Array<string>): Promise<Array<BaseRecord>> {
       const queryName = getQueryOrMutationName(this.resourceName, 'findMany')
 
       const properties = this.getQueryProperties()
@@ -195,7 +195,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
       return response.data[queryName].map((result) => new BaseRecord(stripTypename(result), this))
     }
 
-    async create(params: Record<string, any>) {
+    async create(params: Record<string, any>): Promise<ParamsType> {
       const mutationName = getQueryOrMutationName(this.resourceName, 'create')
 
       const properties = this.getQueryProperties()
@@ -215,10 +215,10 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         variables,
       })
 
-      return new BaseRecord(stripTypename(response.data[mutationName].returning[0]), this)
+      return new BaseRecord(stripTypename(response.data[mutationName].returning[0]), this).toJSON()
     }
 
-    async delete(id: string) {
+    async delete(id: string): Promise<void> {
       const mutationName = getQueryOrMutationName(this.resourceName, 'delete')
 
       const properties = this.getQueryProperties()
@@ -251,7 +251,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         variables,
       })
 
-      return new BaseRecord(stripTypename(response.data[mutationName]), this)
+      return new BaseRecord(stripTypename(response.data[mutationName]), this).toJSON()
     }
   }
 
