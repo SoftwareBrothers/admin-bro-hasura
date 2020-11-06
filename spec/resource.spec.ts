@@ -12,11 +12,14 @@ describe('Resource', () => {
 
   before(async () => {
     resource = await buildResource({
-      endpoint,
-      pkProperty,
       parent,
-      name: resourceName,
-      schema: testSchema,
+      id: resourceName,
+      hasura: {
+        endpoint,
+        schema: testSchema,
+        pkProperty,
+        relationships: {}
+      }
     })
   })
 

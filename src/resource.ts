@@ -1,5 +1,5 @@
-import { BaseResource, BaseRecord, ParamsType, ResourceOptions } from 'admin-bro'
-import { ApolloClient, InMemoryCache, NormalizedCacheObject, gql, HttpLink } from '@apollo/client'
+import { BaseResource, BaseRecord, ParamsType } from 'admin-bro'
+import { ApolloClient, InMemoryCache, gql, HttpLink } from '@apollo/client'
 import * as graphql from 'gql-query-builder'
 import fetch from 'cross-fetch'
 import Property from './property'
@@ -11,6 +11,7 @@ import {
   buildCreateVariables,
   buildDeleteVariables,
   buildUpdateVariables,
+  buildCountVariables,
 } from './utils/querying'
 import { HasuraResourceOptions } from './types'
 import { stripTypename } from './utils/strip-typename';
@@ -59,9 +60,8 @@ const buildResource = async (
       this.resourceName = id
     }
 
-    getQueryProperties() {
-      return this.properties()
-        .map((property) => property.name())
+    private getQueryProperties() {
+      return this.properties().map((property) => property.name())
     }
 
     id(): string {
@@ -104,7 +104,7 @@ const buildResource = async (
       return this.properties().find((p) => p.name() === name) || null
     }
 
-    async count() {
+    async count({ filters = {} }) {
       const queryName = getQueryOrMutationName(this.resourceName, 'count')
 
       const { query: gqlQuery, variables } = graphql.query(
@@ -115,6 +115,7 @@ const buildResource = async (
               aggregate: ['count'],
             },
           ],
+          variables: buildCountVariables({ filters }, this.resourceName),
         },
         null,
         { operationName: queryName },

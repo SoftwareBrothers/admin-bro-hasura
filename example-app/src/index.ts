@@ -20,6 +20,7 @@ const run = async () => {
   const Drink = await buildResource({
     id: 'drink',
     parent: 'Hasura',
+    listProperties: ['id', 'name'],
     hasura: {
       schema: graphqlSchema.__schema,
       endpoint: graphqlEndpoint,

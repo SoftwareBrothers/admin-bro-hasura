@@ -1,5 +1,5 @@
 import { BaseProperty, PropertyType } from 'admin-bro'
-import { GraphQLFieldNode, GraphQLTypeNode, HasuraResourceOptions } from './types'
+import { GraphQLFieldNode, GraphQLTypeNode } from './types'
 
 const TYPES_MAPPING = {
   Int: 'number',
@@ -51,15 +51,13 @@ class Property extends BaseProperty {
   }
 
   isVisible(): boolean {
-    // fields containing password are hidden by default
-    return !this.name().match('password')
+    return this.name() !== '__typename';
   }
 
   isId(): boolean {
     return ['id', this.pkProperty].includes(this.name().toLowerCase())
   }
 
-  // eslint-disable-next-line class-methods-use-this
   reference(): string | null {
     if (this.referencedResource) {
       return this.referencedResource
@@ -94,6 +92,14 @@ class Property extends BaseProperty {
 
   isRequired(): boolean {
     return this.gqlFieldDefinitionNode.type.kind === 'NON_NULL'
+  }
+
+  availableValues(): null {
+    return null
+  }
+
+  subProperties(): any[] {
+    return []
   }
 }
 

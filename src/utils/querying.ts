@@ -81,6 +81,7 @@ const whereArgumentFromFilters = (filters?: FindFilter) => {
   if (!filters || Object.keys(filters).length === 0) return {}
 
   return Object.values(filters).reduce((whereArgs, filter) => {
+    if (!filter.value || !filter.property) return whereArgs
     whereArgs[filter.path] = transformFilterValue(filter.value, filter.property)
 
     return whereArgs
@@ -144,6 +145,23 @@ const buildFindVariables = (
 
   if (filters && Object.keys(filters).length) {
     const where = whereArgumentFromFilters(filters)
+
+    variables.where = {
+      name: 'where',
+      type: `${resourceName}_bool_exp`,
+      value: where,
+    }
+  }
+
+  return variables
+}
+
+const buildCountVariables = ({ filters = {} }: { filters?: FindFilter}, resourceName: string) => {
+  const variables: FindVariables = {}
+  if (filters && Object.keys(filters).length) {
+    const where = whereArgumentFromFilters(filters)
+
+    console.log(where, filters)
 
     variables.where = {
       name: 'where',
@@ -229,4 +247,5 @@ export {
   buildCreateVariables,
   buildDeleteVariables,
   buildUpdateVariables,
+  buildCountVariables,
 }
