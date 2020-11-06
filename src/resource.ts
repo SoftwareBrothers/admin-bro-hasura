@@ -169,7 +169,7 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
         variables,
       })
 
-      return new BaseRecord(new BaseRecord(stripTypename(response.data[queryName]), this), this)
+      return new BaseRecord(stripTypename(response.data[queryName]), this)
     }
 
     async findMany(ids: Array<string>) {
