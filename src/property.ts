@@ -10,7 +10,7 @@ const TYPES_MAPPING = {
   json: 'object',
   jsonb: 'object',
   bigint: 'number',
-  timestamp: 'datetime',
+  timestamp: 'date',
   timestamptz: 'datetime',
 }
 

@@ -12,7 +12,7 @@ import {
   buildDeleteVariables,
   buildUpdateVariables,
 } from './utils/querying'
-import { GraphQLFieldNode, HasuraResourceOptions } from './types'
+import { HasuraResourceOptions } from './types'
 import { stripTypename } from './utils/strip-typename';
 
 const DEFAULT_DB_TYPE = 'hasura'
