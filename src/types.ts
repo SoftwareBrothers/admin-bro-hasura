@@ -28,25 +28,36 @@ type GraphQLFieldNode = {
  */
 type HasuraResourceOptions = {
   /**
-   * Hasura GraphQL Endpoint
-   */
-  endpoint: string;
-  /**
-   * schema.json file
-   */
-  schema: any;
-  /**
    * Resource name (Hasura table name)
    */
   name: string;
   /**
-   * Primary key name of the resource
-   */
-  pkProperty: string;
-  /**
    * Parent under which the resource should be displayed
    */
   parent: string | null;
+  /**
+   * Options specific to Hasura adapter
+   */
+  hasura: {
+    /**
+     * Primary key name of the resource
+     */
+    pkProperty: string;
+    /**
+     * Hasura GraphQL Endpoint
+     */
+    endpoint: string;
+    /**
+     * schema.json file
+     */
+    schema: any;
+    relationships: {
+      [graphQLFieldName: string]: {
+        resourceName: string;
+        referenceField: string;
+      }
+    }
+  }
 };
 
 export {

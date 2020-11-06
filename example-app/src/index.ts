@@ -14,21 +14,30 @@ const run = async () => {
   const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT || '<your hasura graphql url>'
 
   const Drink = await buildResource({
-    endpoint: graphqlEndpoint,
     name: 'drink',
-    pkProperty: 'id',
     parent: 'Hasura',
-    // eslint-disable-next-line no-underscore-dangle
-    schema: graphqlSchema.__schema,
+    hasura: {
+      schema: graphqlSchema.__schema,
+      endpoint: graphqlEndpoint,
+      pkProperty: 'id',
+      relationships: {},
+    }
   })
 
   const Person = await buildResource({
-    endpoint: graphqlEndpoint,
     name: 'person',
-    pkProperty: 'person_id',
     parent: 'Hasura',
-    // eslint-disable-next-line no-underscore-dangle
-    schema: graphqlSchema.__schema,
+    hasura: {
+      schema: graphqlSchema.__schema,
+      endpoint: graphqlEndpoint,
+      pkProperty: 'person_id',
+      relationships: {
+        drink: {
+          referenceField: 'favorite_drink_id',
+          resourceName: 'drink'
+        }
+      }
+    }
   })
 
   const admin = new AdminBro({

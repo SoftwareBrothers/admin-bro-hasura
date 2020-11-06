@@ -1,5 +1,5 @@
 import { BaseProperty, PropertyType } from 'admin-bro'
-import { GraphQLFieldNode, GraphQLTypeNode } from './types'
+import { GraphQLFieldNode, GraphQLTypeNode, HasuraResourceOptions } from './types'
 
 const TYPES_MAPPING = {
   Int: 'number',
@@ -16,15 +16,18 @@ class Property extends BaseProperty {
   gqlFieldDefinitionNode: any
 
   pkProperty: string
+  referencedResource: string | null
 
   constructor(
     gqlDefinitionNode: GraphQLFieldNode,
     pkProperty: string,
+    referencedResource: string | null = null,
   ) {
     super({ path: gqlDefinitionNode.name })
 
     this.gqlFieldDefinitionNode = gqlDefinitionNode
     this.pkProperty = pkProperty
+    this.referencedResource = referencedResource
   }
 
   getType(node: GraphQLTypeNode): string | null {
@@ -56,8 +59,8 @@ class Property extends BaseProperty {
 
   // eslint-disable-next-line class-methods-use-this
   reference(): string | null {
-    if (this.gqlFieldDefinitionNode.description && this.gqlFieldDefinitionNode.description.includes('relationship')) {
-      return this.gqlFieldDefinitionNode.name
+    if (this.referencedResource) {
+      return this.referencedResource
     }
 
     return null

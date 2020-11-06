@@ -36,11 +36,14 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
 
     client: ApolloClient<NormalizedCacheObject>
 
+    relationships: HasuraResourceOptions['hasura']['relationships'] = {}
     fields: GraphQLFieldNode[]
 
     constructor() {
       super()
-      const { parent: dbName, endpoint, name, pkProperty } = options
+      const { parent: dbName, name, hasura } = options
+      const { endpoint, pkProperty, schema, relationships = {} } = hasura
+
       this.dbName = dbName || 'hasura'
       this.graphqlEndpoint = endpoint
       this.resourceName = name
@@ -55,12 +58,12 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
           },
         },
       })
-      this.fields = options.schema.types.find((type) => type.name === name).fields
+      this.relationships = relationships
+      this.fields = schema.types.find((type) => type.name === name).fields
     }
 
     getQueryProperties() {
       return this.properties()
-        .filter((property) => property.type() !== 'reference' && !property.isArray())
         .map((property) => property.name())
     }
 
@@ -81,9 +84,23 @@ const buildResource = async (options: HasuraResourceOptions): Promise<BaseResour
     }
 
     properties(): Property[] {
-      return this.fields
-        .filter((field) => !field.description || !field.description.includes('relationship'))
-        .map((field) => new Property(field, this.pkProperty))
+      const propertiesMap = this.fields
+        .reduce((properties, field) => {
+          const relationship = this.relationships[field.name]
+          if (relationship) {
+            const reference = this.fields.find(f => f.name === relationship.referenceField)
+
+            if (!reference) return properties
+
+            properties[reference.name] = new Property(reference, this.pkProperty, relationship.resourceName)
+          } else if (!(field.name in properties) && !(field.description || '').includes('relationship')) {
+            properties[field.name] = new Property(field, this.pkProperty)
+          }
+
+          return properties
+        }, {})
+
+        return Object.values(propertiesMap)
     }
 
     property(name: string) {
