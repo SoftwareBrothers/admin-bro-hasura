@@ -23,10 +23,10 @@ const DEFAULT_DB_TYPE = 'hasura'
  *
  * @memberof module:@admin-bro/hasura
  * @param {HasuraResourceOptions} options
- * @return {Promise<BaseResource>}
+ * @return {BaseResource}
  *
  */
-const buildResource = async (options: HasuraResourceOptions): Promise<BaseResource> => {
+const buildResource = (options: HasuraResourceOptions): BaseResource => {
   const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? []
   const { pkProperty } = options.hasura
   const relationships = options.hasura.relationships ?? {}

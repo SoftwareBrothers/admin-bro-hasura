@@ -17,7 +17,7 @@ const run = async () => {
   // using these commands:
   // $ yarn add get-graphql-schema
   // $ get-graphql-schema <GRAPHQL_ENDPOINT_URL> -j > schema.json
-  const Drink = await buildResource({
+  const Drink = buildResource({
     id: 'drink',
     parent: 'Hasura',
     listProperties: ['id', 'name'],
@@ -29,7 +29,7 @@ const run = async () => {
     },
   })
 
-  const Person = await buildResource({
+  const Person = buildResource({
     id: 'person',
     parent: 'Hasura',
     hasura: {
