@@ -1,7 +1,7 @@
 import chai from 'chai'
-import Property from '../src/property'
+import buildProperty from '../src/property'
 
-describe('Property', () => {
+describe('buildProperty', () => {
   const nonListField = {
     name: 'name',
     description: null,
@@ -54,37 +54,37 @@ describe('Property', () => {
 
   describe('#isArray', () => {
     it('returns false for regular (not arrayed) property', () => {
-      const property = new Property(nonListField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: nonListField, pkProperty })
 
       chai.expect(property.isArray()).to.equal(false)
     })
 
     it('returns true for array property', () => {
-      const property = new Property(listField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: listField, pkProperty })
       chai.expect(property.isArray()).to.equal(true)
     })
   })
 
   describe('#type', () => {
     it('returns correct string type', () => {
-      const property = new Property(stringField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: stringField, pkProperty })
       chai.expect(property.type()).to.equal('string')
     })
 
     it('returns correct integer type', () => {
-      const property = new Property(bigintField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: bigintField, pkProperty })
       chai.expect(property.type()).to.equal('number')
     })
   })
 
   describe('isRequired', () => {
     it('returns true for required fields', () => {
-      const property = new Property(requiredField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: requiredField, pkProperty })
       chai.expect(property.isRequired()).to.equal(true)
     })
 
     it('returns false for not required fields', () => {
-      const property = new Property(notRequiredField, pkProperty)
+      const property = buildProperty({ graphqlFieldDefinitionNode: notRequiredField, pkProperty })
       chai.expect(property.isRequired()).to.equal(false)
     })
   })

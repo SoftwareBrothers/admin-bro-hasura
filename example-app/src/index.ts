@@ -13,26 +13,41 @@ const run = async () => {
 
   const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT || '<your hasura graphql url>'
 
-  const Drink = await buildResource({
-    endpoint: graphqlEndpoint,
+  // GraphQL Schema introspection in .json format is required to build resources, you can fetch it
+  // using these commands:
+  // $ yarn add get-graphql-schema
+  // $ get-graphql-schema <GRAPHQL_ENDPOINT_URL> -j > schema.json
+  const Drink = buildResource({
     name: 'drink',
-    pkProperty: 'id',
-    parent: 'Hasura',
-    // eslint-disable-next-line no-underscore-dangle
     schema: graphqlSchema.__schema,
+    endpoint: graphqlEndpoint,
+    pkProperty: 'id',
+    relationships: {},
   })
 
-  const Person = await buildResource({
-    endpoint: graphqlEndpoint,
+  const Person = buildResource({
+    dbName: 'hasura',
     name: 'person',
-    pkProperty: 'person_id',
-    parent: 'Hasura',
-    // eslint-disable-next-line no-underscore-dangle
     schema: graphqlSchema.__schema,
+    endpoint: graphqlEndpoint,
+    pkProperty: 'person_id',
+    relationships: {
+      drink: {
+        referenceField: 'favorite_drink_id',
+        resourceName: 'drink',
+      },
+    },
   })
 
   const admin = new AdminBro({
-    resources: [Drink, Person],
+    resources: [
+      {
+        resource: Drink,
+        options: { properties: { 'some_json.test': { type: 'number' } } },
+      },
+      { resource: Person, options: { listProperties: ['name', 'age'] } },
+    ],
+    rootPath: '/app',
   })
   const router = buildRouter(admin)
 

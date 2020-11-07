@@ -1,57 +1,66 @@
 type GraphQLArgNode = {
-  name: string;
-  description: string | null;
-  type: GraphQLTypeNode;
-  defaultValue: string | null;
+  name: string
+  description: string | null
+  type: GraphQLTypeNode
+  defaultValue: string | null
 }
 
 type GraphQLTypeNode = {
-  kind: string;
-  name: string | null;
-  ofType: GraphQLTypeNode | null;
+  kind: string
+  name: string | null
+  ofType: GraphQLTypeNode | null
 }
 
 type GraphQLFieldNode = {
-  name: string;
-  description: string | null;
-  args: GraphQLArgNode[];
-  type: GraphQLTypeNode;
-  isDeprecated: boolean;
-  deprecationReason: string | null;
+  name: string
+  description: string | null
+  args: GraphQLArgNode[]
+  type: GraphQLTypeNode
+  isDeprecated: boolean
+  deprecationReason: string | null
 }
 
 /**
  * Resource options for buildResource method
- * 
+ *
  * @alias HasuraResourceOptions
  * @memberof module:@admin-bro/hasura
  */
 type HasuraResourceOptions = {
   /**
-   * Hasura GraphQL Endpoint
+   * Resource name
    */
-  endpoint: string;
+  name: string
   /**
-   * schema.json file
+   * Database name
+   *
+   * default: hasura
    */
-  schema: any;
-  /**
-   * Resource name (Hasura table name)
-   */
-  name: string;
+  dbName?: string
   /**
    * Primary key name of the resource
    */
-  pkProperty: string;
+  pkProperty: string
   /**
-   * Parent under which the resource should be displayed
+   * Hasura GraphQL Endpoint
    */
-  parent: string | null;
-};
-
-export {
-  GraphQLArgNode,
-  GraphQLTypeNode,
-  GraphQLFieldNode,
-  HasuraResourceOptions,
+  endpoint: string
+  /**
+   * schema.json file
+   */
+  schema: any
+  relationships: {
+    [graphQLFieldName: string]: {
+      resourceName: string
+      referenceField: string
+    }
+  }
 }
+
+type HasuraPropertyProps = {
+  graphqlFieldDefinitionNode: GraphQLFieldNode
+  pkProperty: string
+  referencedResource?: string | null
+}
+
+export { GraphQLArgNode, GraphQLTypeNode, GraphQLFieldNode, HasuraResourceOptions, HasuraPropertyProps }

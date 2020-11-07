@@ -1,4 +1,95 @@
-import Property from '../property'
+/* eslint-disable no-underscore-dangle */
+/* eslint-disable no-restricted-globals */
+/* eslint-disable camelcase */
+import { BaseProperty } from 'admin-bro'
+
+import { stripTypename } from './strip-typename'
+
+type FindFilter = { [field: string]: { path: string; property?: BaseProperty; value: any } }
+type FindFilterOperator = '_in' | '_eq' | '_lte' | '_gte'
+type FindVariables = {
+  limit?: number
+  offset?: number
+  order_by?: {
+    name: 'order_by'
+    type: string
+    value: Array<{
+      [field: string]: 'asc' | 'desc'
+    }>
+  }
+  where?: {
+    name: 'where'
+    type: string
+    value: {
+      [field: string]: {
+        [operator in FindFilterOperator]: any
+      }
+    }
+  }
+}
+type FindOneVariables = {
+  [pkProperty: string]: {
+    type: string
+    value: string | number
+  }
+}
+type FindManyVariables = {
+  where: {
+    name: 'where'
+    type: string
+    value: {
+      [pkProperty: string]: {
+        type: string
+        value: string[] | number[]
+      }
+    }
+  }
+}
+type CreateVariables = {
+  objects: {
+    type: string
+    value: { [key: string]: any }
+  }
+}
+type DeleteVariables = FindOneVariables
+type UpdateVariables = {
+  pk_columns?: {
+    type: string
+    value: {
+      [pkProperty: string]: string | number
+    }
+  }
+  _set?: { [key: string]: any }
+}
+
+const transformFilterValue = (originalValue: any, property?: BaseProperty) => {
+  const type = Object.prototype.toString.call(originalValue)
+
+  const isArray = type === '[object Array]'
+  const isObject = type === '[object Object]'
+
+  if (isArray) return { _in: originalValue }
+  if (isObject && property && ['date', 'datetime'].includes(property.type())) {
+    const filter: { [key in FindFilterOperator]?: any } = {}
+    if (originalValue.to) filter._lte = new Date(originalValue.to).toUTCString()
+    if (originalValue.from) filter._gte = new Date(originalValue.from).toUTCString()
+
+    return filter
+  }
+
+  return { _eq: originalValue }
+}
+
+const whereArgumentFromFilters = (filters?: FindFilter) => {
+  if (!filters || Object.keys(filters).length === 0) return {}
+
+  return Object.values(filters).reduce((whereArgs, filter) => {
+    if (!filter.value || !filter.property) return whereArgs
+    whereArgs[filter.path] = transformFilterValue(filter.value, filter.property)
+
+    return whereArgs
+  }, {})
+}
 
 const getQueryOrMutationName = (resourceName: string, query: string): string => {
   switch (query) {
@@ -21,74 +112,139 @@ const getQueryOrMutationName = (resourceName: string, query: string): string => 
   case 'count': {
     return `${resourceName}_aggregate`
   }
-  default: throw new Error('Query not implemented')
+  default:
+    throw new Error('Query not implemented')
   }
 }
 
-const constructListArgs = (params: {
-  limit?: number,
-  offset?: number,
-  sort?: { sortBy?: string, direction: 'asc' | 'desc' },
-  filters?: { [field: string]: { path: string, property?: Property, value: any } }
-}): string => {
-  const { limit, offset, sort, filters } = params
-  const args: string[] = []
+const buildFindVariables = (
+  {
+    limit,
+    offset,
+    sort = { direction: 'asc' },
+    filters,
+  }: {
+    limit: number
+    offset: number
+    sort: { sortBy?: string; direction: 'asc' | 'desc' }
+    filters?: FindFilter
+  },
+  resourceName: string,
+): FindVariables => {
+  const variables: FindVariables = {}
 
-  if (limit) {
-    args.push(`limit: ${limit}`)
-  }
+  if (!isNaN(Number(limit))) variables.limit = limit
+  if (!isNaN(Number(offset))) variables.offset = offset
 
-  if (offset) {
-    args.push(`offset: ${offset}`)
-  }
-
-  if (sort) {
+  if (sort && sort.sortBy) {
     const { sortBy, direction } = sort
-    if (sortBy) args.push(`order_by: { ${sortBy}: ${direction} }`)
+
+    variables.order_by = {
+      name: 'order_by',
+      type: `[${resourceName}_order_by!]`,
+      value: [{ [sortBy]: direction }],
+    }
   }
 
   if (filters && Object.keys(filters).length) {
-    const where = Object.values(filters)
-      .map((filter) => {
-        const operator = Array.isArray(filter.value) ? '_in' : '_eq'
-        const value = Array.isArray(filter.value)
-          ? `[${filter.value.map((v) => `"${v}"`)}]`
-          : `"${filter.value}"`
+    const where = whereArgumentFromFilters(filters)
 
-        return `${filter.path}: { ${operator}: ${value} }`
-      })
-      .join(', ')
-
-    args.push(`where: { ${where} }`)
+    variables.where = {
+      name: 'where',
+      type: `${resourceName}_bool_exp`,
+      value: where,
+    }
   }
 
-  return `(${args.join(', ')})`
+  return variables
 }
 
-const constructInsertArgs = (
-  params: { [key: string]: any },
-): string => `[{ ${Object.entries(params).map(([key, value]) => `${key}: "${value}"`)} }]`
+const buildCountVariables = ({ filters = {} }: { filters?: FindFilter }, resourceName: string): FindVariables => {
+  const variables: FindVariables = {}
+  if (filters && Object.keys(filters).length) {
+    const where = whereArgumentFromFilters(filters)
 
-const constructUpdateArgs = (
-  id: string,
-  pkPropertyName: string,
-  params: { [key: string]: any },
-): string => {
-  const args = [`pk_columns: { ${pkPropertyName}: "${id}" }`]
+    variables.where = {
+      name: 'where',
+      type: `${resourceName}_bool_exp`,
+      value: where,
+    }
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { __typename, ...data } = params
+  return variables
+}
 
-  const set = Object.entries(data).map(([key, value]) => `${key}: "${value}"`)
+const buildFindOneVariables = ({ id }: { id: string }, pkProperty: string): FindOneVariables => ({
+  [pkProperty]: {
+    type: 'bigint!',
+    value: id,
+  },
+})
 
-  args.push(`_set: { ${set} }`)
+const buildFindManyVariables = (
+  { ids }: { ids: string[] },
+  pkProperty: string,
+  resourceName: string,
+): FindManyVariables => {
+  const where = whereArgumentFromFilters({
+    [pkProperty]: {
+      value: ids,
+      path: pkProperty,
+    },
+  })
 
-  return `(${args.join(', ')})`
+  return {
+    where: {
+      name: 'where',
+      type: `${resourceName}_bool_exp`,
+      value: where,
+    },
+  }
+}
+
+const buildCreateVariables = (params: { [key: string]: any }, resourceName: string): CreateVariables => ({
+  objects: {
+    type: `[${resourceName}_insert_input!]!`,
+    value: [params],
+  },
+})
+
+const buildDeleteVariables = ({ id }: { id: string }, pkProperty: string): DeleteVariables => ({
+  [pkProperty]: {
+    type: 'bigint!',
+    value: id,
+  },
+})
+
+const buildUpdateVariables = (
+  { id, params }: { id: string; params: { [key: string]: any } },
+  pkProperty: string,
+  resourceName: string,
+): UpdateVariables => {
+  const variables: UpdateVariables = {}
+
+  variables.pk_columns = {
+    type: `${resourceName}_pk_columns_input!`,
+    value: {
+      [pkProperty]: id,
+    },
+  }
+
+  variables._set = {
+    type: `${resourceName}_set_input!`,
+    value: stripTypename(params),
+  }
+
+  return variables
 }
 
 export {
   getQueryOrMutationName,
-  constructListArgs,
-  constructInsertArgs,
-  constructUpdateArgs,
+  buildFindVariables,
+  buildFindOneVariables,
+  buildFindManyVariables,
+  buildCreateVariables,
+  buildDeleteVariables,
+  buildUpdateVariables,
+  buildCountVariables,
 }

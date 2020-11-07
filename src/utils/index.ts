@@ -1,1 +1,9 @@
-export { constructListArgs, getQueryOrMutationName } from './querying'
+export {
+  getQueryOrMutationName,
+  buildFindVariables,
+  buildFindOneVariables,
+  buildFindManyVariables,
+  buildCreateVariables,
+  buildDeleteVariables,
+  buildUpdateVariables,
+} from './querying'
