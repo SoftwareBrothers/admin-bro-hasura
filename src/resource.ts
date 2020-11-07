@@ -48,7 +48,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     dbName: string
 
     constructor(resourceOptions?: Omit<HasuraResourceOptions, 'hasura'>) {
-      super(resourceOptions)
+      super({ options: resourceOptions })
       const { parent, id } = options
 
       this.dbName = parent ? (typeof parent === 'string' ? parent : parent.name) ?? DEFAULT_DB_TYPE : DEFAULT_DB_TYPE
