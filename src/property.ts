@@ -1,5 +1,5 @@
 import { BaseProperty, PropertyType } from 'admin-bro'
-import { GraphQLFieldNode, GraphQLTypeNode } from './types'
+import { GraphQLTypeNode, HasuraPropertyProps } from './types'
 
 const TYPES_MAPPING = {
   Int: 'number',
@@ -14,94 +14,86 @@ const TYPES_MAPPING = {
   timestamptz: 'datetime',
 }
 
-class Property extends BaseProperty {
-  gqlFieldDefinitionNode: any
+const buildProperty = (props: HasuraPropertyProps): BaseProperty => {
+  const { graphqlFieldDefinitionNode, pkProperty, referencedResource = null } = props
 
-  pkProperty: string
-
-  referencedResource: string | null
-
-  constructor(
-    gqlDefinitionNode: GraphQLFieldNode,
-    pkProperty: string,
-    referencedResource: string | null = null,
-  ) {
-    super({ path: gqlDefinitionNode.name })
-
-    this.gqlFieldDefinitionNode = gqlDefinitionNode
-    this.pkProperty = pkProperty
-    this.referencedResource = referencedResource
-  }
-
-  getType(node: GraphQLTypeNode): string | null {
-    if (node.name) return node.name
-
-    if (!node.ofType) return null
-
-    return this.getType(node.ofType)
-  }
-
-  name(): string {
-    return this.gqlFieldDefinitionNode.name
-  }
-
-  isEditable(): boolean {
-    return !this.isId()
-      && !this.isArray()
-      && this.gqlFieldDefinitionNode.type.name !== 'jsonb'
-  }
-
-  isVisible(): boolean {
-    return this.name() !== '__typename'
-  }
-
-  isId(): boolean {
-    return ['id', this.pkProperty].includes(this.name().toLowerCase())
-  }
-
-  reference(): string | null {
-    if (this.referencedResource) {
-      return this.referencedResource
+  class Property extends BaseProperty {
+    constructor() {
+      super({ path: graphqlFieldDefinitionNode.name })
     }
 
-    return null
-  }
+    getType(node: GraphQLTypeNode): string | null {
+      if (node.name) return node.name
 
-  isArray(): boolean {
-    return this.gqlFieldDefinitionNode.type.kind === 'LIST'
-      || (
-        this.gqlFieldDefinitionNode.type.kind === 'NON_NULL'
-        && this.gqlFieldDefinitionNode.type.ofType
-        && this.gqlFieldDefinitionNode.type.ofType.kind === 'LIST')
-  }
+      if (!node.ofType) return null
 
-  type(): PropertyType {
-    if (this.reference()) {
-      return 'reference'
+      return this.getType(node.ofType)
     }
 
-    const namedTypeNode = this.getType(this.gqlFieldDefinitionNode.type)
+    name(): string {
+      return graphqlFieldDefinitionNode.name
+    }
 
-    if (!namedTypeNode) return 'string'
+    isEditable(): boolean {
+      return !this.isId()
+        && !this.isArray()
+        && graphqlFieldDefinitionNode.type.name !== 'jsonb'
+    }
 
-    return TYPES_MAPPING[namedTypeNode] || 'string'
+    isVisible(): boolean {
+      return this.name() !== '__typename'
+    }
+
+    isId(): boolean {
+      return ['id', pkProperty].includes(this.name().toLowerCase())
+    }
+
+    reference(): string | null {
+      if (referencedResource) {
+        return referencedResource
+      }
+
+      return null
+    }
+
+    isArray(): boolean {
+      return graphqlFieldDefinitionNode.type.kind === 'LIST'
+        || (
+          graphqlFieldDefinitionNode.type.kind === 'NON_NULL'
+          && !!graphqlFieldDefinitionNode.type.ofType
+          && graphqlFieldDefinitionNode.type.ofType.kind === 'LIST')
+    }
+
+    type(): PropertyType {
+      if (this.reference()) {
+        return 'reference'
+      }
+
+      const namedTypeNode = this.getType(graphqlFieldDefinitionNode.type)
+
+      if (!namedTypeNode) return 'string'
+
+      return TYPES_MAPPING[namedTypeNode] || 'string'
+    }
+
+    isSortable(): boolean {
+      return ['string', 'number'].includes(this.type())
+    }
+
+    isRequired(): boolean {
+      return graphqlFieldDefinitionNode.type.kind === 'NON_NULL'
+    }
+
+    availableValues(): null {
+      return null
+    }
+
+    subProperties(): any[] {
+      return []
+    }
   }
 
-  isSortable(): boolean {
-    return ['string', 'number'].includes(this.type())
-  }
-
-  isRequired(): boolean {
-    return this.gqlFieldDefinitionNode.type.kind === 'NON_NULL'
-  }
-
-  availableValues(): null {
-    return null
-  }
-
-  subProperties(): any[] {
-    return []
-  }
+  return new Property()
 }
 
-export default Property
+export default buildProperty

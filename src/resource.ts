@@ -1,8 +1,8 @@
-import { BaseResource, BaseRecord, ParamsType } from 'admin-bro'
+import { BaseResource, BaseRecord, BaseProperty, ParamsType } from 'admin-bro'
 import { ApolloClient, InMemoryCache, gql, HttpLink } from '@apollo/client'
 import * as graphql from 'gql-query-builder'
 import fetch from 'cross-fetch'
-import Property from './property'
+import buildProperty from './property'
 import {
   getQueryOrMutationName,
   buildFindVariables,
@@ -28,9 +28,7 @@ const DEFAULT_DB_TYPE = 'hasura'
  */
 const buildResource = (options: HasuraResourceOptions): BaseResource => {
   const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? []
-  const { pkProperty } = options.hasura
-  const relationships = options.hasura.relationships ?? {}
-  const graphqlEndpoint = options.hasura.endpoint
+  const { pkProperty, relationships, endpoint: graphqlEndpoint } = options.hasura
   const graphqlClient = new ApolloClient({
     link: new HttpLink({ uri: graphqlEndpoint, fetch }),
     cache: new InMemoryCache(),
@@ -77,7 +75,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
       return this.dbType
     }
 
-    properties(): Property[] {
+    properties(): BaseProperty[] {
       const propertiesMap = fields.reduce((properties, field) => {
         const relationship = relationships[field.name]
         if (relationship) {
@@ -85,9 +83,16 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
 
           if (!reference) return properties
 
-          properties[reference.name] = new Property(reference, pkProperty, relationship.resourceName)
+          properties[reference.name] = buildProperty({
+            pkProperty,
+            referencedResource: relationship.resourceName,
+            graphqlFieldDefinitionNode: reference,
+          })
         } else if (!(field.name in properties) && !(field.description || '').includes('relationship')) {
-          properties[field.name] = new Property(field, pkProperty)
+          properties[field.name] = buildProperty({
+            pkProperty,
+            graphqlFieldDefinitionNode: field,
+          })
         }
 
         return properties

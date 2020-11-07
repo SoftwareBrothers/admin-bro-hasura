@@ -58,4 +58,10 @@ type HasuraResourceOptions = ResourceOptions & {
   }
 }
 
-export { GraphQLArgNode, GraphQLTypeNode, GraphQLFieldNode, HasuraResourceOptions }
+type HasuraPropertyProps = {
+  graphqlFieldDefinitionNode: GraphQLFieldNode;
+  pkProperty: string;
+  referencedResource?: string | null;
+}
+
+export { GraphQLArgNode, GraphQLTypeNode, GraphQLFieldNode, HasuraResourceOptions, HasuraPropertyProps }
