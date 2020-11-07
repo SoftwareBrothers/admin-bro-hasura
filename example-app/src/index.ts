@@ -43,7 +43,7 @@ const run = async () => {
     resources: [
       {
         resource: Drink,
-        options: { properties: { some_json: { type: 'mixed' }, 'some_json.test': { type: 'number' } } },
+        options: { properties: { 'some_json.test': { type: 'number' } } },
       },
       { resource: Person, options: { listProperties: ['name', 'age'] } },
     ],

@@ -15,6 +15,7 @@ import {
 } from './utils/querying'
 import { HasuraResourceOptions } from './types'
 import { stripTypename } from './utils/strip-typename'
+import transformParams from './utils/transform-params'
 
 const DEFAULT_DB_TYPE = 'hasura'
 
@@ -242,7 +243,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
       const { query: gqlMutation, variables } = graphql.mutation({
         operation: mutationName,
         fields: properties,
-        variables: buildUpdateVariables({ id, params }, pkProperty, resourceName),
+        variables: buildUpdateVariables({ id, params: transformParams(params) }, pkProperty, resourceName),
       })
 
       const response = await graphqlClient.mutate({
