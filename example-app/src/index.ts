@@ -27,11 +27,19 @@ const run = async () => {
       pkProperty: 'id',
       relationships: {},
     },
+    properties: {
+      some_json: { type: 'mixed' },
+      'some_json.test': { type: 'number' },
+    },
   })
 
   const Person = buildResource({
     id: 'person',
-    parent: 'Hasura',
+    parent: {
+      icon: 'Settings',
+      name: 'Test',
+    },
+    listProperties: ['age', 'name'],
     hasura: {
       schema: graphqlSchema.__schema,
       endpoint: graphqlEndpoint,

@@ -1,10 +1,11 @@
 /* eslint-disable no-underscore-dangle */
 /* eslint-disable no-restricted-globals */
 /* eslint-disable camelcase */
-import Property from '../property'
+import { BaseProperty } from 'admin-bro'
+
 import { stripTypename } from './strip-typename'
 
-type FindFilter = { [field: string]: { path: string; property?: Property; value: any } }
+type FindFilter = { [field: string]: { path: string; property?: BaseProperty; value: any } }
 type FindFilterOperator = '_in' | '_eq' | '_lte' | '_gte'
 type FindVariables = {
   limit?: number
@@ -61,7 +62,7 @@ type UpdateVariables = {
   _set?: { [key: string]: any }
 }
 
-const transformFilterValue = (originalValue: any, property?: Property) => {
+const transformFilterValue = (originalValue: any, property?: BaseProperty) => {
   const type = Object.prototype.toString.call(originalValue)
 
   const isArray = type === '[object Array]'
@@ -158,10 +159,7 @@ const buildFindVariables = (
   return variables
 }
 
-const buildCountVariables = (
-  { filters = {} }: { filters?: FindFilter},
-  resourceName: string,
-): FindVariables => {
+const buildCountVariables = ({ filters = {} }: { filters?: FindFilter }, resourceName: string): FindVariables => {
   const variables: FindVariables = {}
   if (filters && Object.keys(filters).length) {
     const where = whereArgumentFromFilters(filters)

@@ -7,8 +7,8 @@ const TYPES_MAPPING = {
   String: 'string',
   ID: 'id',
   Boolean: 'boolean',
-  json: 'object',
-  jsonb: 'object',
+  json: 'mixed',
+  jsonb: 'mixed',
   bigint: 'number',
   timestamp: 'date',
   timestamptz: 'datetime',
@@ -37,7 +37,6 @@ const buildProperty = (props: HasuraPropertyProps): BaseProperty => {
     isEditable(): boolean {
       return !this.isId()
         && !this.isArray()
-        && graphqlFieldDefinitionNode.type.name !== 'jsonb'
     }
 
     isVisible(): boolean {

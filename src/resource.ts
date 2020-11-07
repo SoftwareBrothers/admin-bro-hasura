@@ -47,8 +47,8 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
 
     dbName: string
 
-    constructor() {
-      super()
+    constructor(resourceOptions?: Omit<HasuraResourceOptions, 'hasura'>) {
+      super(resourceOptions)
       const { parent, id } = options
 
       this.dbName = parent ? (typeof parent === 'string' ? parent : parent.name) ?? DEFAULT_DB_TYPE : DEFAULT_DB_TYPE
@@ -260,7 +260,10 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
   }
 
-  return new Resource()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { hasura, ...resourceOpts } = options
+
+  return new Resource(resourceOpts)
 }
 
 export default buildResource
