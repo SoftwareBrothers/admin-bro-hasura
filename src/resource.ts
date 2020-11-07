@@ -27,8 +27,14 @@ const DEFAULT_DB_TYPE = 'hasura'
  *
  */
 const buildResource = (options: HasuraResourceOptions): BaseResource => {
-  const fields = options.hasura.schema.types.find((type) => type.name === options.id).fields ?? []
-  const { pkProperty, relationships, endpoint: graphqlEndpoint } = options.hasura
+  const fields = options.schema.types.find((type) => type.name === options.name).fields ?? []
+  const {
+    pkProperty,
+    relationships,
+    endpoint: graphqlEndpoint,
+    name: resourceName,
+    dbName = DEFAULT_DB_TYPE,
+  } = options
   const graphqlClient = new ApolloClient({
     link: new HttpLink({ uri: graphqlEndpoint, fetch }),
     cache: new InMemoryCache(),
@@ -43,32 +49,20 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
   class Resource extends BaseResource {
     private readonly dbType: string = DEFAULT_DB_TYPE
 
-    resourceName: string
-
-    dbName: string
-
-    constructor(resourceOptions?: Omit<HasuraResourceOptions, 'hasura'>) {
-      super({ options: resourceOptions })
-      const { parent, id } = options
-
-      this.dbName = parent ? (typeof parent === 'string' ? parent : parent.name) ?? DEFAULT_DB_TYPE : DEFAULT_DB_TYPE
-      this.resourceName = id
-    }
-
     private getQueryProperties() {
       return this.properties().map((property) => property.name())
     }
 
     id(): string {
-      return this.resourceName
+      return resourceName
     }
 
     name(): string {
-      return this.resourceName
+      return resourceName
     }
 
     databaseName(): string {
-      return this.dbName
+      return dbName
     }
 
     databaseType(): string {
@@ -106,7 +100,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async count({ filters = {} }): Promise<number> {
-      const queryName = getQueryOrMutationName(this.resourceName, 'count')
+      const queryName = getQueryOrMutationName(resourceName, 'count')
 
       const { query: gqlQuery, variables } = graphql.query(
         {
@@ -116,7 +110,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
               aggregate: ['count'],
             },
           ],
-          variables: buildCountVariables({ filters }, this.resourceName),
+          variables: buildCountVariables({ filters }, resourceName),
         },
         null,
         { operationName: queryName },
@@ -131,7 +125,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async find(query, { limit = 10, offset = 0, sort }): Promise<Array<BaseRecord>> {
-      const queryName = getQueryOrMutationName(this.resourceName, 'find')
+      const queryName = getQueryOrMutationName(resourceName, 'find')
 
       const { filters } = query
       const properties = this.getQueryProperties()
@@ -139,7 +133,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
       const { query: gqlQuery, variables } = graphql.query(
         {
           operation: queryName,
-          variables: buildFindVariables({ limit, offset, sort, filters }, this.resourceName),
+          variables: buildFindVariables({ limit, offset, sort, filters }, resourceName),
           fields: properties,
         },
         null,
@@ -155,7 +149,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async findOne(id: string): Promise<BaseRecord> {
-      const queryName = getQueryOrMutationName(this.resourceName, 'findOne')
+      const queryName = getQueryOrMutationName(resourceName, 'findOne')
 
       const properties = this.getQueryProperties()
 
@@ -178,7 +172,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async findMany(ids: Array<string>): Promise<Array<BaseRecord>> {
-      const queryName = getQueryOrMutationName(this.resourceName, 'findMany')
+      const queryName = getQueryOrMutationName(resourceName, 'findMany')
 
       const properties = this.getQueryProperties()
 
@@ -186,7 +180,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
         {
           operation: queryName,
           fields: properties,
-          variables: buildFindManyVariables({ ids }, pkProperty, this.resourceName),
+          variables: buildFindManyVariables({ ids }, pkProperty, resourceName),
         },
         null,
         { operationName: queryName },
@@ -201,7 +195,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async create(params: Record<string, any>): Promise<ParamsType> {
-      const mutationName = getQueryOrMutationName(this.resourceName, 'create')
+      const mutationName = getQueryOrMutationName(resourceName, 'create')
 
       const properties = this.getQueryProperties()
 
@@ -212,7 +206,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
             returning: properties,
           },
         ],
-        variables: buildCreateVariables(params, this.resourceName),
+        variables: buildCreateVariables(params, resourceName),
       })
 
       const response = await graphqlClient.mutate({
@@ -224,7 +218,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async delete(id: string): Promise<void> {
-      const mutationName = getQueryOrMutationName(this.resourceName, 'delete')
+      const mutationName = getQueryOrMutationName(resourceName, 'delete')
 
       const properties = this.getQueryProperties()
 
@@ -241,14 +235,14 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
 
     async update(id: string, params: Record<string, any>): Promise<ParamsType> {
-      const mutationName = getQueryOrMutationName(this.resourceName, 'update')
+      const mutationName = getQueryOrMutationName(resourceName, 'update')
 
       const properties = this.getQueryProperties()
 
       const { query: gqlMutation, variables } = graphql.mutation({
         operation: mutationName,
         fields: properties,
-        variables: buildUpdateVariables({ id, params }, pkProperty, this.resourceName),
+        variables: buildUpdateVariables({ id, params }, pkProperty, resourceName),
       })
 
       const response = await graphqlClient.mutate({
@@ -260,10 +254,7 @@ const buildResource = (options: HasuraResourceOptions): BaseResource => {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { hasura, ...resourceOpts } = options
-
-  return new Resource(resourceOpts)
+  return new Resource()
 }
 
 export default buildResource

@@ -1,5 +1,3 @@
-import { ResourceOptions } from 'admin-bro'
-
 type GraphQLArgNode = {
   name: string
   description: string | null
@@ -28,40 +26,41 @@ type GraphQLFieldNode = {
  * @alias HasuraResourceOptions
  * @memberof module:@admin-bro/hasura
  */
-type HasuraResourceOptions = ResourceOptions & {
+type HasuraResourceOptions = {
   /**
    * Resource name
    */
-  id: string;
+  name: string
   /**
-   * Additional options required for Hasura adapter
+   * Database name
+   *
+   * default: hasura
    */
-  hasura: {
-    /**
-     * Primary key name of the resource
-     */
-    pkProperty: string
-    /**
-     * Hasura GraphQL Endpoint
-     */
-    endpoint: string
-    /**
-     * schema.json file
-     */
-    schema: any
-    relationships: {
-      [graphQLFieldName: string]: {
-        resourceName: string
-        referenceField: string
-      }
+  dbName?: string
+  /**
+   * Primary key name of the resource
+   */
+  pkProperty: string
+  /**
+   * Hasura GraphQL Endpoint
+   */
+  endpoint: string
+  /**
+   * schema.json file
+   */
+  schema: any
+  relationships: {
+    [graphQLFieldName: string]: {
+      resourceName: string
+      referenceField: string
     }
   }
 }
 
 type HasuraPropertyProps = {
-  graphqlFieldDefinitionNode: GraphQLFieldNode;
-  pkProperty: string;
-  referencedResource?: string | null;
+  graphqlFieldDefinitionNode: GraphQLFieldNode
+  pkProperty: string
+  referencedResource?: string | null
 }
 
 export { GraphQLArgNode, GraphQLTypeNode, GraphQLFieldNode, HasuraResourceOptions, HasuraPropertyProps }

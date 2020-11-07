@@ -18,43 +18,35 @@ const run = async () => {
   // $ yarn add get-graphql-schema
   // $ get-graphql-schema <GRAPHQL_ENDPOINT_URL> -j > schema.json
   const Drink = buildResource({
-    id: 'drink',
-    parent: 'Hasura',
-    listProperties: ['id', 'name'],
-    hasura: {
-      schema: graphqlSchema.__schema,
-      endpoint: graphqlEndpoint,
-      pkProperty: 'id',
-      relationships: {},
-    },
-    properties: {
-      some_json: { type: 'mixed' },
-      'some_json.test': { type: 'number' },
-    },
+    name: 'drink',
+    schema: graphqlSchema.__schema,
+    endpoint: graphqlEndpoint,
+    pkProperty: 'id',
+    relationships: {},
   })
 
   const Person = buildResource({
-    id: 'person',
-    parent: {
-      icon: 'Settings',
-      name: 'Test',
-    },
-    listProperties: ['age', 'name'],
-    hasura: {
-      schema: graphqlSchema.__schema,
-      endpoint: graphqlEndpoint,
-      pkProperty: 'person_id',
-      relationships: {
-        drink: {
-          referenceField: 'favorite_drink_id',
-          resourceName: 'drink',
-        },
+    dbName: 'hasura',
+    name: 'person',
+    schema: graphqlSchema.__schema,
+    endpoint: graphqlEndpoint,
+    pkProperty: 'person_id',
+    relationships: {
+      drink: {
+        referenceField: 'favorite_drink_id',
+        resourceName: 'drink',
       },
     },
   })
 
   const admin = new AdminBro({
-    resources: [Drink, Person],
+    resources: [
+      {
+        resource: Drink,
+        options: { properties: { some_json: { type: 'mixed' }, 'some_json.test': { type: 'number' } } },
+      },
+      { resource: Person, options: { listProperties: ['name', 'age'] } },
+    ],
     rootPath: '/app',
   })
   const router = buildRouter(admin)
